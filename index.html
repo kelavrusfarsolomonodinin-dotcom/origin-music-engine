@@ -45,7 +45,8 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 const $=id=>document.getElementById(id),tempo=$('tempo'),density=$('density');
 let ctx=null,master=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false,seed=1;
 tempo.addEventListener('input',()=>{$('tempoValue').textContent=tempo.value+' BPM'});
-density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});\nconst variation=$('variation');variation.addEventListener('input',()=>{$('variationValue').textContent=variation.value+'%'});
+density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});
+const variation=$('variation');variation.addEventListener('input',()=>{$('variationValue').textContent=variation.value+'%'});
 const scales={power:[0,3,5,7,10],inspire:[0,2,5,7,9],focus:[0,2,4,7,9],warm:[0,3,5,7,10],unity:[0,2,4,7,9],calm:[0,2,5,7,9]};
 const sections=['Вступление','Развитие','Кульминация','Завершение'];
 function randomAt(n){let x=(seed+n*0x6D2B79F5)>>>0;x=Math.imul(x^(x>>>15),x|1);x^=x+Math.imul(x^(x>>>7),x|61);return ((x^(x>>>14))>>>0)/4294967296;}
