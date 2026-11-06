@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151b">
+<title>ORIGIN MUSIC ENGINE — Prototype 0.1</title>
+<style>
+:root{color-scheme:dark;--bg:#10151b;--panel:#19232d;--line:#344553;--gold:#d4b36a;--muted:#aab6bf}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263642,var(--bg) 65%);color:#f3f0e8;font:16px system-ui,sans-serif;min-height:100vh}
+main{max-width:850px;margin:auto;padding:24px 16px 48px}h1{font-size:clamp(25px,6vw,42px);letter-spacing:.08em;margin:8px 0;color:var(--gold)}.sub{color:var(--muted);margin:0 0 24px}
+.panel{background:#19232de8;border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 10px 35px #0004}
+label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,input[type=range]{width:100%}select,button{background:#263642;color:#fff;border:1px solid #526573;border-radius:10px;padding:12px;font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.value{color:var(--gold);float:right}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}button{cursor:pointer;flex:1;min-width:120px}button.primary{background:#9c7837;border-color:#d4b36a;color:#111;font-weight:700}button:disabled{opacity:.5;cursor:default}
+.status{color:var(--gold);min-height:24px;margin-top:12px}.note{font-size:13px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+<h1>ORIGIN MUSIC ENGINE</h1>
+<p class="sub">Первый аудиопрототип · версия 0.1 · работает локально в браузере</p>
+<section class="panel">
+<h2>Настрой звучание</h2>
+<div class="grid">
+<div><label for="mood">Эмоциональное направление</label><select id="mood"><option value="power">Энергия и решительность</option><option value="inspire">Переживание и вдохновение</option><option value="focus">Погружение и концентрация</option><option value="warm">Ностальгия и тепло</option><option value="unity">Единство и причастность</option><option value="calm">Умиротворение и восстановление</option></select></div>
+<div><label for="tempo">Темп <span class="value" id="tempoValue">96 BPM</span></label><input id="tempo" type="range" min="55" max="150" value="96"></div>
+<div><label for="density">Плотность звучания <span class="value" id="densityValue">60%</span></label><input id="density" type="range" min="10" max="100" value="60"></div>
+<div><label for="tone">Основной тембр</label><select id="tone"><option value="deep">Глубокий электронный</option><option value="bright">Светлый воздушный</option><option value="pulse">Пульсирующий бас</option><option value="bell">Колокольный</option></select></div>
+</div>
+<div class="actions"><button class="primary" id="play">▶ Создать и слушать</button><button id="stop" disabled>■ Остановить</button></div>
+<div class="status" id="status" aria-live="polite">Готов к запуску. Нажми «Создать и слушать».</div>
+</section>
+<section class="panel">
+<h2>Что сейчас умеет прототип</h2>
+<p>Создаёт короткую оригинальную электронную последовательность: басовый пульс, гармонические слои и меняющийся ритм. Темп, плотность и тембр влияют на звук.</p>
+<p class="note">Это первый проверочный синтезатор, а не готовая студия. Здесь пока нет реалистичного вокала, волынки, скандинавских инструментов, записи и экспорта аудиофайла. Эти функции добавим отдельными этапами.</p>
+</section>
+<p class="note">Звук генерируется самим браузером через Web Audio API. Никакие музыкальные сервисы, токены или серверные запросы не используются. Для запуска нужен браузер с поддержкой Web Audio API.</p>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const tempo=$('tempo'),density=$('density');
+tempo.addEventListener('input',()=> $('tempoValue').textContent=tempo.value+' BPM');
+density.addEventListener('input',()=> $('densityValue').textContent=density.value+'%');
+let ctx=null,timer=null,step=0,startedAt=0,master=null;
+const scales={power:[0,3,5,7,10],inspire:[0,2,5,7,9],focus:[0,2,4,7,9],warm:[0,3,5,7,10],unity:[0,2,4,7,9],calm:[0,2,5,7,9]};
+function note(freq,time,duration,wave,volume,filterFreq){
+ const osc=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
+ osc.type=wave;osc.frequency.setValueAtTime(freq,time);
+ filter.type='lowpass';filter.frequency.setValueAtTime(filterFreq,time);
+ gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),time+.025);
+ gain.gain.exponentialRampToValueAtTime(.0001,time+duration);
+ osc.connect(filter);filter.connect(gain);gain.connect(master);
+ osc.start(time);osc.stop(time+duration+.04);
+}
+function schedule(){
+ if(!ctx||ctx.state!=='running')return;
+ const bpm=Number(tempo.value),d=Number(density.value)/100;
+ const beat=60/bpm,now=ctx.currentTime+.03,bar=step%32,section=Math.floor(bar/8);
+ const mood=$('mood').value,scale=scales[mood],root=55;
+ const tone=$('tone').value;
+ const wave=tone==='bright'?'sine':tone==='bell'?'triangle':'sawtooth';
+ const filter=tone==='deep'?500:tone==='bright'?2400:tone==='pulse'?800:3200;
+ const t=now;
+ if(bar%4===0)note(root/2,t,.65,'sine',.16*d,180);
+ if(bar%2===0)note(root*Math.pow(2,scale[(bar/2+section)%scale.length]/12),t,.32,wave,.055*d,filter);
+ if(bar%4===2&&section>0)note(root*2,t,.18,'triangle',.025*d,filter*1.4);
+ if(bar%2===1&&d>.35)note(root*4,t,.07,'sine',.012*d,filter*2);
+ if(section>=1&&bar%4===0)note(root*1.5,t,.22,'triangle',.018*d,900);
+ step++;
+}
+function start(){
+ const AudioContext=window.AudioContext||window.webkitAudioContext;
+ if(!AudioContext){$('status').textContent='Этот браузер не поддерживает Web Audio API.';return}
+ if(!ctx){ctx=new AudioContext();master=ctx.createGain();master.gain.value=.75;master.connect(ctx.destination)}
+ ctx.resume().then(()=>{
+ clearInterval(timer);step=0;schedule();timer=setInterval(schedule,Math.max(100,60000/Number(tempo.value)/2));
+ $('play').disabled=true;$('stop').disabled=false;$('status').textContent='Музыка играет. Меняй темп, плотность и тембр во время прослушивания.';
+ });
+}
+function stop(){clearInterval(timer);timer=null;if(ctx){master.gain.setTargetAtTime(.0001,ctx.currentTime,.04);setTimeout(()=>{if(ctx&&master){master.gain.setTargetAtTime(.75,ctx.currentTime,.03)}},180)}
+ $('play').disabled=false;$('stop').disabled=true;$('status').textContent='Остановлено. Можно изменить параметры и создать новый вариант.';}
+$('play').addEventListener('click',start);$('stop').addEventListener('click',stop);
+})();
+</script>
+</body>
+</html>
