@@ -1,89 +1,123 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#10151b">
-<title>ORIGIN MUSIC ENGINE — Prototype 0.1</title>
+<title>ORIGIN MUSIC ENGINE — Prototype 0.2</title>
 <style>
 :root{color-scheme:dark;--bg:#10151b;--panel:#19232d;--line:#344553;--gold:#d4b36a;--muted:#aab6bf}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263642,var(--bg) 65%);color:#f3f0e8;font:16px system-ui,sans-serif;min-height:100vh}
-main{max-width:850px;margin:auto;padding:24px 16px 48px}h1{font-size:clamp(25px,6vw,42px);letter-spacing:.08em;margin:8px 0;color:var(--gold)}.sub{color:var(--muted);margin:0 0 24px}
+main{max-width:900px;margin:auto;padding:24px 16px 48px}h1{font-size:clamp(25px,6vw,42px);letter-spacing:.08em;margin:8px 0;color:var(--gold)}.sub{color:var(--muted);margin:0 0 24px}
 .panel{background:#19232de8;border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 10px 35px #0004}
 label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,input[type=range]{width:100%}select,button{background:#263642;color:#fff;border:1px solid #526573;border-radius:10px;padding:12px;font:inherit}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.value{color:var(--gold);float:right}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}button{cursor:pointer;flex:1;min-width:120px}button.primary{background:#9c7837;border-color:#d4b36a;color:#111;font-weight:700}button:disabled{opacity:.5;cursor:default}
 .status{color:var(--gold);min-height:24px;margin-top:12px}.note{font-size:13px;color:var(--muted);line-height:1.5}
+.progress{height:8px;background:#344553;border-radius:20px;overflow:hidden;margin:10px 0}.progress>div{height:100%;width:0;background:var(--gold);transition:width .12s}
 </style>
 </head>
-<body>
-<main>
+<body><main>
 <h1>ORIGIN MUSIC ENGINE</h1>
-<p class="sub">Первый аудиопрототип · версия 0.1 · работает локально в браузере</p>
+<p class="sub">Аудиопрототип 0.2 · композиция с развитием и сменой музыкальных слоёв</p>
 <section class="panel">
-<h2>Настрой звучание</h2>
+<h2>Настрой композицию</h2>
 <div class="grid">
 <div><label for="mood">Эмоциональное направление</label><select id="mood"><option value="power">Энергия и решительность</option><option value="inspire">Переживание и вдохновение</option><option value="focus">Погружение и концентрация</option><option value="warm">Ностальгия и тепло</option><option value="unity">Единство и причастность</option><option value="calm">Умиротворение и восстановление</option></select></div>
 <div><label for="tempo">Темп <span class="value" id="tempoValue">96 BPM</span></label><input id="tempo" type="range" min="55" max="150" value="96"></div>
-<div><label for="density">Плотность звучания <span class="value" id="densityValue">60%</span></label><input id="density" type="range" min="10" max="100" value="60"></div>
+<div><label for="density">Плотность <span class="value" id="densityValue">60%</span></label><input id="density" type="range" min="10" max="100" value="60"></div>
 <div><label for="tone">Основной тембр</label><select id="tone"><option value="deep">Глубокий электронный</option><option value="bright">Светлый воздушный</option><option value="pulse">Пульсирующий бас</option><option value="bell">Колокольный</option></select></div>
 </div>
 <div class="actions"><button class="primary" id="play">▶ Создать и слушать</button><button id="stop" disabled>■ Остановить</button></div>
-<div class="status" id="status" aria-live="polite">Готов к запуску. Нажми «Создать и слушать».</div>
+<div class="status" id="status" aria-live="polite">Готов к запуску.</div>
+<div class="progress"><div id="progress"></div></div>
+<div class="note" id="section">Структура композиции появится после запуска.</div>
 </section>
-<section class="panel">
-<h2>Что сейчас умеет прототип</h2>
-<p>Создаёт короткую оригинальную электронную последовательность: басовый пульс, гармонические слои и меняющийся ритм. Темп, плотность и тембр влияют на звук.</p>
-<p class="note">Это первый проверочный синтезатор, а не готовая студия. Здесь пока нет реалистичного вокала, волынки, скандинавских инструментов, записи и экспорта аудиофайла. Эти функции добавим отдельными этапами.</p>
-</section>
-<p class="note">Звук генерируется самим браузером через Web Audio API. Никакие музыкальные сервисы, токены или серверные запросы не используются. Для запуска нужен браузер с поддержкой Web Audio API.</p>
+<section class="panel"><h2>Что изменилось в версии 0.2</h2>
+<p>Теперь это не один короткий повтор. Композиция проходит четыре части: вступление, развитие, кульминацию и завершение. В каждой части меняются плотность, бас, ударные и мелодические слои. Есть несколько ритмических рисунков.</p>
+<p class="note">Пока это синтезированный электронный эскиз. Реалистичные голоса, волынка, скандинавские инструменты, запись и экспорт аудио ещё не подключены.</p></section>
+<p class="note">Звук создаётся в браузере через Web Audio API. Внешние сервисы, токены и серверные запросы не используются.</p>
 </main>
 <script>
 (()=>{
-const $=id=>document.getElementById(id);
-const tempo=$('tempo'),density=$('density');
-tempo.addEventListener('input',()=> { $('tempoValue').textContent=tempo.value+' BPM'; if(timer){clearInterval(timer);timer=setInterval(schedule,Math.max(100,60000/Number(tempo.value)/2));} });
-density.addEventListener('input',()=> $('densityValue').textContent=density.value+'%');
-let ctx=null,timer=null,step=0,startedAt=0,master=null;
+const $=id=>document.getElementById(id),tempo=$('tempo'),density=$('density');
+let ctx=null,master=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false;
+tempo.addEventListener('input',()=>{$('tempoValue').textContent=tempo.value+' BPM'});
+density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});
 const scales={power:[0,3,5,7,10],inspire:[0,2,5,7,9],focus:[0,2,4,7,9],warm:[0,3,5,7,10],unity:[0,2,4,7,9],calm:[0,2,5,7,9]};
-function note(freq,time,duration,wave,volume,filterFreq){
- const osc=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
- osc.type=wave;osc.frequency.setValueAtTime(freq,time);
- filter.type='lowpass';filter.frequency.setValueAtTime(filterFreq,time);
- gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),time+.025);
- gain.gain.exponentialRampToValueAtTime(.0001,time+duration);
- osc.connect(filter);filter.connect(gain);gain.connect(master);
- osc.start(time);osc.stop(time+duration+.04);
+const sections=['Вступление','Развитие','Кульминация','Завершение'];
+function setup(){
+ const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Браузер не поддерживает Web Audio API');
+ if(ctx)return;ctx=new AC();master=ctx.createGain();master.gain.value=.72;master.connect(ctx.destination);
+ delay=ctx.createDelay(.5);delay.delayTime.value=.28;feedback=ctx.createGain();feedback.gain.value=.19;wet=ctx.createGain();wet.gain.value=.16;
+ delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(master);
 }
-function schedule(){
- if(!ctx||ctx.state!=='running')return;
- const bpm=Number(tempo.value),d=Number(density.value)/100;
- const beat=60/bpm,now=ctx.currentTime+.03,bar=step%32,section=Math.floor(bar/8);
- const mood=$('mood').value,scale=scales[mood],root=55;
- const tone=$('tone').value;
+function sound(freq,time,duration,wave,volume,cutoff,echo=false){
+ const osc=ctx.createOscillator(),amp=ctx.createGain(),filter=ctx.createBiquadFilter();
+ osc.type=wave;osc.frequency.setValueAtTime(freq,time);filter.type='lowpass';filter.frequency.setValueAtTime(cutoff,time);
+ amp.gain.setValueAtTime(.0001,time);amp.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),time+.018);
+ amp.gain.exponentialRampToValueAtTime(.0001,time+duration);osc.connect(filter);filter.connect(amp);amp.connect(master);if(echo)amp.connect(delay);
+ osc.start(time);osc.stop(time+duration+.03);
+}
+function kick(time,amount){sound(85,time,.18,'sine',amount,130)}
+function snare(time,amount){
+ sound(185,time,.11,'triangle',amount,1200);
+ // короткий шумовой щелчок на основе нескольких быстрых частот
+ sound(1100,time,.035,'square',amount*.13,2600);
+}
+function hat(time,amount){sound(6200,time,.025,'square',amount,7500)}
+function scheduleOne(t){
+ const bpm=Number(tempo.value),densityValue=Number(density.value)/100;
+ const beat=60/bpm,bar=Math.floor(step/16),pos=step%16,part=Math.min(3,Math.floor(bar/4));
+ const mood=$('mood').value,scale=scales[mood],tone=$('tone').value;
+ const root=mood==='calm'?49:mood==='warm'?55:55;
  const wave=tone==='bright'?'sine':tone==='bell'?'triangle':'sawtooth';
- const filter=tone==='deep'?500:tone==='bright'?2400:tone==='pulse'?800:3200;
- const t=now;
- if(bar%4===0)note(root/2,t,.65,'sine',.16*d,180);
- if(bar%2===0)note(root*Math.pow(2,scale[(bar/2+section)%scale.length]/12),t,.32,wave,.055*d,filter);
- if(bar%4===2&&section>0)note(root*2,t,.18,'triangle',.025*d,filter*1.4);
- if(bar%2===1&&d>.35)note(root*4,t,.07,'sine',.012*d,filter*2);
- if(section>=1&&bar%4===0)note(root*1.5,t,.22,'triangle',.018*d,900);
+ const cutoff=tone==='deep'?650:tone==='bright'?2600:tone==='pulse'?900:3800;
+ const build=[.48,.72,1,.38][part],d=densityValue*build;
+ // Басовый рисунок меняется по частям и тактам
+ if(pos===0|| (part>=1&&pos===10&&bar%2===1))kick(t,.12*d);
+ if(part>=1&&(pos===4||pos===12))snare(t,.045*d);
+ if(part===2&&(pos===2||pos===6||pos===10||pos===14))hat(t,.012*d);
+ else if(pos%4===2&&part!==0)hat(t,.008*d);
+ // Низкая опора и гармонические ноты
+ if(pos===0||pos===8){
+   const degree=scale[(bar+(part===2?2:0))%scale.length];
+   sound(root*Math.pow(2,(degree-12)/12),t,beat*1.45,'sawtooth',.09*d,220);
+ }
+ // Мелодическая фраза: в кульминации чаще, во вступлении реже
+ const melodySteps=part===0?[0,8]:part===1?[0,5,8,13]:part===2?[0,3,5,8,11,13]:[0,8,12];
+ if(melodySteps.includes(pos)&&densityValue>.18){
+   const seqIndex=(Math.floor(step/2)+bar+part)%scale.length;
+   const octave=(part===2&&pos%2===1)?4:3;
+   const freq=root*Math.pow(2,octave+scale[seqIndex]/12);
+   sound(freq,t,beat*(part===2?.42:.7),wave,.035*d,cutoff,true);
+ }
+ // Медленный атмосферный слой, меняющийся раз в такт
+ if(pos===0&&part!==2){
+   const degree=scale[(bar+2)%scale.length];
+   sound(root*2*Math.pow(2,degree/12),t,beat*3,'sine',.012*d,1100,true);
+ }
  step++;
+ const total=64,progress=Math.min(100,step/total*100);
+ $('progress').style.width=progress+'%';
+ $('section').textContent=sections[part]+' · такт '+(bar%4+1)+' из 4';
+ if(step>=total){stop(true);$('status').textContent='Композиция завершена. Измени параметры и создай новый вариант.'}
 }
-function start(){
- const AudioContext=window.AudioContext||window.webkitAudioContext;
- if(!AudioContext){$('status').textContent='Этот браузер не поддерживает Web Audio API.';return}
- if(!ctx){ctx=new AudioContext();master=ctx.createGain();master.gain.value=.75;master.connect(ctx.destination)}
- ctx.resume().then(()=>{
- clearInterval(timer);step=0;schedule();timer=setInterval(schedule,Math.max(100,60000/Number(tempo.value)/2));
- $('play').disabled=true;$('stop').disabled=false;$('status').textContent='Музыка играет. Меняй темп, плотность и тембр во время прослушивания.';
- });
+function tick(){
+ if(!playing)return;
+ const interval=60/Number(tempo.value)/4;
+ while(nextTime<ctx.currentTime+.12){scheduleOne(nextTime);nextTime+=interval;if(!playing)break;}
 }
-function stop(){clearInterval(timer);timer=null;if(ctx){master.gain.setTargetAtTime(.0001,ctx.currentTime,.04);setTimeout(()=>{if(ctx&&master){master.gain.setTargetAtTime(.75,ctx.currentTime,.03)}},180)}
- $('play').disabled=false;$('stop').disabled=true;$('status').textContent='Остановлено. Можно изменить параметры и создать новый вариант.';}
-$('play').addEventListener('click',start);$('stop').addEventListener('click',stop);
+async function start(){
+ try{setup();await ctx.resume();stop(false);playing=true;step=0;nextTime=ctx.currentTime+.06;master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.72,ctx.currentTime,.03);
+ tick();clock=setInterval(tick,25);$('play').disabled=true;$('stop').disabled=false;$('status').textContent='Воспроизведение идёт. Параметры можно менять во время звучания.';}
+ catch(e){$('status').textContent=e.message||'Не удалось запустить звук.'}
+}
+function stop(completed=false){
+ playing=false;if(clock){clearInterval(clock);clock=null;}
+ if(master&&ctx){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.0001,ctx.currentTime,.025);}
+ $('play').disabled=false;$('stop').disabled=true;
+ if(!completed){$('status').textContent='Остановлено. Можно изменить параметры и начать заново.';$('progress').style.width='0%';$('section').textContent='Ожидание запуска.'}
+}
+$('play').addEventListener('click',start);$('stop').addEventListener('click',()=>stop(false));
 })();
-</script>
-</body>
-</html>
+</script></body></html>
