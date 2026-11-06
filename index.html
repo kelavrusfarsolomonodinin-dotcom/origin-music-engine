@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#10151b">
-<title>ORIGIN MUSIC ENGINE — Prototype 0.2</title>
+<title>ORIGIN MUSIC ENGINE — Prototype 0.3</title>
 <style>
 :root{color-scheme:dark;--bg:#10151b;--panel:#19232d;--line:#344553;--gold:#d4b36a;--muted:#aab6bf}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263642,var(--bg) 65%);color:#f3f0e8;font:16px system-ui,sans-serif;min-height:100vh}
@@ -18,7 +18,7 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 </head>
 <body><main>
 <h1>ORIGIN MUSIC ENGINE</h1>
-<p class="sub">Аудиопрототип 0.2 · композиция с развитием и сменой музыкальных слоёв</p>
+<p class="sub">Аудиопрототип 0.3 · вариативность и сохранение музыкальных проектов</p>
 <section class="panel">
 <h2>Настрой композицию</h2>
 <div class="grid">
@@ -26,25 +26,29 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 <div><label for="tempo">Темп <span class="value" id="tempoValue">96 BPM</span></label><input id="tempo" type="range" min="55" max="150" value="96"></div>
 <div><label for="density">Плотность <span class="value" id="densityValue">60%</span></label><input id="density" type="range" min="10" max="100" value="60"></div>
 <div><label for="tone">Основной тембр</label><select id="tone"><option value="deep">Глубокий электронный</option><option value="bright">Светлый воздушный</option><option value="pulse">Пульсирующий бас</option><option value="bell">Колокольный</option></select></div>
+<div><label for="rhythm">Ритмический рисунок</label><select id="rhythm"><option value="steady">Ровный и устойчивый</option><option value="tribal">Этнический пульс</option><option value="sync">Синкопированный</option></select></div>
+<div><label for="variation">Музыкальная вариативность <span class="value" id="variationValue">45%</span></label><input id="variation" type="range" min="0" max="100" value="45"></div>
 </div>
 <div class="actions"><button class="primary" id="play">▶ Создать и слушать</button><button id="stop" disabled>■ Остановить</button></div>
+<div class="actions"><button id="save">Сохранить настройки</button><button id="load">Загрузить настройки</button><input id="file" type="file" accept="application/json,.json" hidden></div>
 <div class="status" id="status" aria-live="polite">Готов к запуску.</div>
 <div class="progress"><div id="progress"></div></div>
 <div class="note" id="section">Структура композиции появится после запуска.</div>
 </section>
-<section class="panel"><h2>Что изменилось в версии 0.2</h2>
-<p>Теперь это не один короткий повтор. Композиция проходит четыре части: вступление, развитие, кульминацию и завершение. В каждой части меняются плотность, бас, ударные и мелодические слои. Есть несколько ритмических рисунков.</p>
+<section class="panel"><h2>Что изменилось в версии 0.3</h2>
+<p>Композиция проходит четыре части: вступление, развитие, кульминацию и завершение. Можно выбирать ритмический рисунок и степень музыкальной вариативности. Настройки можно сохранить в JSON-файл и загрузить позднее.</p>
 <p class="note">Пока это синтезированный электронный эскиз. Реалистичные голоса, волынка, скандинавские инструменты, запись и экспорт аудио ещё не подключены.</p></section>
 <p class="note">Звук создаётся в браузере через Web Audio API. Внешние сервисы, токены и серверные запросы не используются.</p>
 </main>
 <script>
 (()=>{
 const $=id=>document.getElementById(id),tempo=$('tempo'),density=$('density');
-let ctx=null,master=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false;
+let ctx=null,master=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false,seed=1;
 tempo.addEventListener('input',()=>{$('tempoValue').textContent=tempo.value+' BPM'});
-density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});
+density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});\nconst variation=$('variation');variation.addEventListener('input',()=>{$('variationValue').textContent=variation.value+'%'});
 const scales={power:[0,3,5,7,10],inspire:[0,2,5,7,9],focus:[0,2,4,7,9],warm:[0,3,5,7,10],unity:[0,2,4,7,9],calm:[0,2,5,7,9]};
 const sections=['Вступление','Развитие','Кульминация','Завершение'];
+function randomAt(n){let x=(seed+n*0x6D2B79F5)>>>0;x=Math.imul(x^(x>>>15),x|1);x^=x+Math.imul(x^(x>>>7),x|61);return ((x^(x>>>14))>>>0)/4294967296;}
 function setup(){
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Браузер не поддерживает Web Audio API');
  if(ctx)return;ctx=new AC();master=ctx.createGain();master.gain.value=.72;master.connect(ctx.destination);
@@ -68,7 +72,7 @@ function hat(time,amount){sound(6200,time,.025,'square',amount,7500)}
 function scheduleOne(t){
  const bpm=Number(tempo.value),densityValue=Number(density.value)/100;
  const beat=60/bpm,bar=Math.floor(step/16),pos=step%16,part=Math.min(3,Math.floor(bar/4));
- const mood=$('mood').value,scale=scales[mood],tone=$('tone').value;
+ const mood=$('mood').value,scale=scales[mood],tone=$('tone').value,rhythm=$('rhythm').value,variety=Number(variation.value)/100;
  const root=mood==='calm'?49:mood==='warm'?55:55;
  const wave=tone==='bright'?'sine':tone==='bell'?'triangle':'sawtooth';
  const cutoff=tone==='deep'?650:tone==='bright'?2600:tone==='pulse'?900:3800;
@@ -86,7 +90,7 @@ function scheduleOne(t){
  // Мелодическая фраза: в кульминации чаще, во вступлении реже
  const melodySteps=part===0?[0,8]:part===1?[0,5,8,13]:part===2?[0,3,5,8,11,13]:[0,8,12];
  if(melodySteps.includes(pos)&&densityValue>.18){
-   const seqIndex=(Math.floor(step/2)+bar+part)%scale.length;
+   const drift=Math.floor(randomAt(step+seed)*variety*scale.length);const seqIndex=(Math.floor(step/2)+bar+part+drift)%scale.length;
    const octave=(part===2&&pos%2===1)?4:3;
    const freq=root*Math.pow(2,octave+scale[seqIndex]/12);
    sound(freq,t,beat*(part===2?.42:.7),wave,.035*d,cutoff,true);
@@ -118,6 +122,29 @@ function stop(completed=false){
  $('play').disabled=false;$('stop').disabled=true;
  if(!completed){$('status').textContent='Остановлено. Можно изменить параметры и начать заново.';$('progress').style.width='0%';$('section').textContent='Ожидание запуска.'}
 }
-$('play').addEventListener('click',start);$('stop').addEventListener('click',()=>stop(false));
+function projectData(){return {format:'origin-music-engine-project',version:1,mood:$('mood').value,tempo:Number(tempo.value),density:Number(density.value),tone:$('tone').value,rhythm:$('rhythm').value,variation:Number(variation.value)};}
+function applyProject(p){
+ if(!p||p.format!=='origin-music-engine-project')throw Error('Это не файл проекта ORIGIN MUSIC ENGINE');
+ if(p.mood in scales)$('mood').value=p.mood;
+ if(Number.isFinite(p.tempo))tempo.value=Math.max(55,Math.min(150,p.tempo));
+ if(Number.isFinite(p.density))density.value=Math.max(10,Math.min(100,p.density));
+ if(['deep','bright','pulse','bell'].includes(p.tone))$('tone').value=p.tone;
+ if(['steady','tribal','sync'].includes(p.rhythm))$('rhythm').value=p.rhythm;
+ if(Number.isFinite(p.variation))variation.value=Math.max(0,Math.min(100,p.variation));
+ $('tempoValue').textContent=tempo.value+' BPM';$('densityValue').textContent=density.value+'%';$('variationValue').textContent=variation.value+'%';
+}
+$('save').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify(projectData(),null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='origin-music-project.json';a.click();URL.revokeObjectURL(url);
+ $('status').textContent='Настройки сохранены в файл JSON.';
+});
+$('load').addEventListener('click',()=>$('file').click());
+$('file').addEventListener('change',async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ try{applyProject(JSON.parse(await file.text()));$('status').textContent='Настройки загружены.';}
+ catch(err){$('status').textContent=err.message||'Не удалось прочитать файл.';}
+ e.target.value='';
+});
+$('play').addEventListener('click',()=>{seed=(Date.now()>>>0);start();});$('stop').addEventListener('click',()=>stop(false));
 })();
 </script></body></html>
