@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#10151b">
-<title>ORIGIN MUSIC ENGINE — Prototype 0.3</title>
+<title>ORIGIN MUSIC ENGINE — Prototype 0.4</title>
 <style>
 :root{color-scheme:dark;--bg:#10151b;--panel:#19232d;--line:#344553;--gold:#d4b36a;--muted:#aab6bf}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263642,var(--bg) 65%);color:#f3f0e8;font:16px system-ui,sans-serif;min-height:100vh}
@@ -18,7 +18,7 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 </head>
 <body><main>
 <h1>ORIGIN MUSIC ENGINE</h1>
-<p class="sub">Аудиопрототип 0.3 · вариативность и сохранение музыкальных проектов</p>
+<p class="sub">Аудиопрототип 0.4 · 16 тактов, четыре части композиции и более ровная громкость</p>
 <section class="panel">
 <h2>Настрой композицию</h2>
 <div class="grid">
@@ -43,7 +43,7 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 <script>
 (()=>{
 const $=id=>document.getElementById(id),tempo=$('tempo'),density=$('density');
-let ctx=null,master=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false,seed=1;
+let ctx=null,master=null,compressor=null,delay=null,feedback=null,wet=null,clock=null,nextTime=0,step=0,playing=false,seed=1;
 tempo.addEventListener('input',()=>{$('tempoValue').textContent=tempo.value+' BPM'});
 density.addEventListener('input',()=>{$('densityValue').textContent=density.value+'%'});
 const variation=$('variation');variation.addEventListener('input',()=>{$('variationValue').textContent=variation.value+'%'});
@@ -52,7 +52,7 @@ const sections=['Вступление','Развитие','Кульминаци�
 function randomAt(n){let x=(seed+n*0x6D2B79F5)>>>0;x=Math.imul(x^(x>>>15),x|1);x^=x+Math.imul(x^(x>>>7),x|61);return ((x^(x>>>14))>>>0)/4294967296;}
 function setup(){
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Браузер не поддерживает Web Audio API');
- if(ctx)return;ctx=new AC();master=ctx.createGain();master.gain.value=.72;master.connect(ctx.destination);
+ if(ctx)return;ctx=new AC();master=ctx.createGain();master.gain.value=.9;compressor=ctx.createDynamicsCompressor();compressor.threshold.value=-18;compressor.knee.value=18;compressor.ratio.value=4;compressor.attack.value=.004;compressor.release.value=.22;master.connect(compressor);compressor.connect(ctx.destination);
  delay=ctx.createDelay(.5);delay.delayTime.value=.28;feedback=ctx.createGain();feedback.gain.value=.19;wet=ctx.createGain();wet.gain.value=.16;
  delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(master);
 }
@@ -77,16 +77,18 @@ function scheduleOne(t){
  const root=mood==='calm'?49:mood==='warm'?55:55;
  const wave=tone==='bright'?'sine':tone==='bell'?'triangle':'sawtooth';
  const cutoff=tone==='deep'?650:tone==='bright'?2600:tone==='pulse'?900:3800;
- const build=[.48,.72,1,.38][part],d=densityValue*build;
+ const build=[.48,.78,1,.42][part],d=densityValue*build;
+ const kickPattern=rhythm==='tribal'?[0,6,10]:rhythm==='sync'?[0,7,11]:[0,8];
+ const snarePattern=rhythm==='tribal'?[4,11]:rhythm==='sync'?[5,13]:[4,12];
  // Басовый рисунок меняется по частям и тактам
- if(pos===0|| (part>=1&&pos===10&&bar%2===1))kick(t,.12*d);
- if(part>=1&&(pos===4||pos===12))snare(t,.045*d);
- if(part===2&&(pos===2||pos===6||pos===10||pos===14))hat(t,.012*d);
- else if(pos%4===2&&part!==0)hat(t,.008*d);
+ if(kickPattern.includes(pos))kick(t,.19*d);
+ if(part>=1&&snarePattern.includes(pos))snare(t,.085*d);
+ if(part===2&&(pos===2||pos===6||pos===10||pos===14))hat(t,.022*d);
+ else if(pos%4===2&&part!==0)hat(t,.014*d);
  // Низкая опора и гармонические ноты
  if(pos===0||pos===8){
    const degree=scale[(bar+(part===2?2:0))%scale.length];
-   sound(root*Math.pow(2,(degree-12)/12),t,beat*1.45,'sawtooth',.09*d,220);
+   sound(root*Math.pow(2,(degree-12)/12),t,beat*1.45,'sawtooth',.15*d,220);
  }
  // Мелодическая фраза: в кульминации чаще, во вступлении реже
  const melodySteps=part===0?[0,8]:part===1?[0,5,8,13]:part===2?[0,3,5,8,11,13]:[0,8,12];
@@ -94,15 +96,15 @@ function scheduleOne(t){
    const drift=Math.floor(randomAt(step+seed)*variety*scale.length);const seqIndex=(Math.floor(step/2)+bar+part+drift)%scale.length;
    const octave=(part===2&&pos%2===1)?4:3;
    const freq=root*Math.pow(2,octave+scale[seqIndex]/12);
-   sound(freq,t,beat*(part===2?.42:.7),wave,.035*d,cutoff,true);
+   sound(freq,t,beat*(part===2?.42:.7),wave,.075*d,cutoff,true);
  }
  // Медленный атмосферный слой, меняющийся раз в такт
  if(pos===0&&part!==2){
    const degree=scale[(bar+2)%scale.length];
-   sound(root*2*Math.pow(2,degree/12),t,beat*3,'sine',.012*d,1100,true);
+   sound(root*2*Math.pow(2,degree/12),t,beat*3,'sine',.025*d,1100,true);
  }
  step++;
- const total=64,progress=Math.min(100,step/total*100);
+ const total=256,progress=Math.min(100,step/total*100);
  $('progress').style.width=progress+'%';
  $('section').textContent=sections[part]+' · такт '+(bar%4+1)+' из 4';
  if(step>=total){stop(true);$('status').textContent='Композиция завершена. Измени параметры и создай новый вариант.'}
@@ -113,7 +115,7 @@ function tick(){
  while(nextTime<ctx.currentTime+.12){scheduleOne(nextTime);nextTime+=interval;if(!playing)break;}
 }
 async function start(){
- try{setup();await ctx.resume();stop(false);playing=true;step=0;nextTime=ctx.currentTime+.06;master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.72,ctx.currentTime,.03);
+ try{setup();await ctx.resume();stop(false);playing=true;step=0;nextTime=ctx.currentTime+.06;master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.9,ctx.currentTime,.03);
  tick();clock=setInterval(tick,25);$('play').disabled=true;$('stop').disabled=false;$('status').textContent='Воспроизведение идёт. Параметры можно менять во время звучания.';}
  catch(e){$('status').textContent=e.message||'Не удалось запустить звук.'}
 }
