@@ -40,6 +40,10 @@ https://kelavrusfarsolomonodinin-dotcom.github.io/origin-music-engine/
 - Экспорт готовой композиции в WAV/MP3.
 - Постоянная библиотека проектов внутри приложения.
 
+## Запуск генеративной модели в облаке
+
+- [Блокнот ACE-Step 1.5 для бесплатного GPU Kaggle](notebooks/ACE_STEP_15_KAGGLE.ipynb). Это экспериментальная конфигурация; наличие GPU зависит от доступности Kaggle, а публичная ссылка Gradio действует только во время сессии.
+
 ## Документы
 
 - [Эмоциональный музыкальный модуль](docs/EMOTIONAL_ENGINE.md)
