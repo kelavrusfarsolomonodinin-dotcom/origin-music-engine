@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#10151b">
-<title>ORIGIN MUSIC ENGINE — Prototype 0.4</title>
+<title>ORIGIN MUSIC ENGINE — Prototype 0.5</title>
 <style>
 :root{color-scheme:dark;--bg:#10151b;--panel:#19232d;--line:#344553;--gold:#d4b36a;--muted:#aab6bf}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263642,var(--bg) 65%);color:#f3f0e8;font:16px system-ui,sans-serif;min-height:100vh}
@@ -18,7 +18,7 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 </head>
 <body><main>
 <h1>ORIGIN MUSIC ENGINE</h1>
-<p class="sub">Аудиопрототип 0.4 · 16 тактов, четыре части композиции и более ровная громкость</p>
+<p class="sub">Аудиопрототип 0.5 · 16 тактов, четыре части, создание и скачивание WAV</p>
 <section class="panel">
 <h2>Настрой композицию</h2>
 <div class="grid">
@@ -29,15 +29,15 @@ label{display:block;color:var(--muted);font-size:14px;margin:12px 0 7px}select,i
 <div><label for="rhythm">Ритмический рисунок</label><select id="rhythm"><option value="steady">Ровный и устойчивый</option><option value="tribal">Этнический пульс</option><option value="sync">Синкопированный</option></select></div>
 <div><label for="variation">Музыкальная вариативность <span class="value" id="variationValue">45%</span></label><input id="variation" type="range" min="0" max="100" value="45"></div>
 </div>
-<div class="actions"><button class="primary" id="play">▶ Создать и слушать</button><button id="stop" disabled>■ Остановить</button></div>
+<div class="actions"><button class="primary" id="play">▶ Создать и слушать</button><button id="export">♫ Создать WAV</button><button id="stop" disabled>■ Остановить</button></div>
 <div class="actions"><button id="save">Сохранить настройки</button><button id="load">Загрузить настройки</button><input id="file" type="file" accept="application/json,.json" hidden></div>
 <div class="status" id="status" aria-live="polite">Готов к запуску.</div>
 <div class="progress"><div id="progress"></div></div>
 <div class="note" id="section">Структура композиции появится после запуска.</div>
 </section>
-<section class="panel"><h2>Что изменилось в версии 0.3</h2>
-<p>Композиция проходит четыре части: вступление, развитие, кульминацию и завершение. Можно выбирать ритмический рисунок и степень музыкальной вариативности. Настройки можно сохранить в JSON-файл и загрузить позднее.</p>
-<p class="note">Пока это синтезированный электронный эскиз. Реалистичные голоса, волынка, скандинавские инструменты, запись и экспорт аудио ещё не подключены.</p></section>
+<section class="panel"><h2>Что изменилось в версии 0.5</h2>
+<p>Композиция проходит четыре части: вступление, развитие, кульминацию и завершение. Добавлен автономный рендерер: он создаёт полноценный стереофайл WAV прямо в браузере, без внешнего сервера и без GPU. В аранжировке используются аккордовые слои, бас, ударные, мелодические фразы и задержка.</p>
+<p class="note">Это процедурный электронный эскиз, а не генерация нейросетью. WAV можно скачать и прослушать отдельно. Реалистичные голоса, хор и акустические инструменты пока не подключены.</p></section>
 <p class="note">Звук создаётся в браузере через Web Audio API. Внешние сервисы, токены и серверные запросы не используются.</p>
 </main>
 <script>
@@ -136,6 +136,102 @@ function applyProject(p){
  if(Number.isFinite(p.variation))variation.value=Math.max(0,Math.min(100,p.variation));
  $('tempoValue').textContent=tempo.value+' BPM';$('densityValue').textContent=density.value+'%';$('variationValue').textContent=variation.value+'%';
 }
+
+async function exportWav(){
+ const button=$('export');
+ const Offline=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+ if(!Offline){$('status').textContent='Этот браузер не поддерживает создание WAV. Попробуй Chrome.';return;}
+ button.disabled=true;$('play').disabled=true;
+ $('status').textContent='Создаю аудиофайл WAV. Это может занять немного времени…';
+ try{
+  const bpm=Number(tempo.value),den=Number(density.value)/100,variety=Number(variation.value)/100;
+  const mood=$('mood').value,scale=scales[mood],rhythm=$('rhythm').value,tone=$('tone').value;
+  const sampleRate=44100,beat=60/bpm,stepTime=beat/4,bars=16;
+  const duration=bars*4*beat+2;
+  const off=new Offline(2,Math.ceil(duration*sampleRate),sampleRate);
+  const out=off.createGain();out.gain.value=.78;
+  const comp=off.createDynamicsCompressor();comp.threshold.value=-18;comp.knee.value=18;comp.ratio.value=4;comp.attack.value=.004;comp.release.value=.25;
+  out.connect(comp);comp.connect(off.destination);
+  const echo=off.createDelay(.6),fb=off.createGain(),wet=off.createGain();
+  echo.delayTime.value=.31;fb.gain.value=.2;wet.gain.value=.13;
+  echo.connect(fb);fb.connect(echo);echo.connect(wet);wet.connect(out);
+  const noiseBuffer=off.createBuffer(1,Math.floor(sampleRate*.18),sampleRate);
+  const noiseData=noiseBuffer.getChannelData(0);
+  for(let i=0;i<noiseData.length;i++)noiseData[i]=Math.random()*2-1;
+  function voice(freq,t,d,wave,vol,cut,send){
+   const osc=off.createOscillator(),filter=off.createBiquadFilter(),env=off.createGain();
+   osc.type=wave;osc.frequency.setValueAtTime(freq,t);
+   filter.type='lowpass';filter.frequency.setValueAtTime(cut,t);
+   env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+.025);
+   env.gain.exponentialRampToValueAtTime(.0001,t+d);
+   osc.connect(filter);filter.connect(env);env.connect(out);if(send)env.connect(echo);
+   osc.start(t);osc.stop(t+d+.04);
+  }
+  function noise(t,d,vol,filterType,cut){
+   const src=off.createBufferSource(),filter=off.createBiquadFilter(),env=off.createGain();
+   src.buffer=noiseBuffer;filter.type=filterType;filter.frequency.value=cut;
+   env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+.006);
+   env.gain.exponentialRampToValueAtTime(.0001,t+d);
+   src.connect(filter);filter.connect(env);env.connect(out);src.start(t);src.stop(t+d+.01);
+  }
+  function kick(t,v){
+   const o=off.createOscillator(),g=off.createGain();o.type='sine';
+   o.frequency.setValueAtTime(115,t);o.frequency.exponentialRampToValueAtTime(42,t+.17);
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+.2);
+   o.connect(g);g.connect(out);o.start(t);o.stop(t+.22);
+  }
+  function snare(t,v){noise(t,.14,v,'highpass',900);voice(185,t,.1,'triangle',v*.24,1000,false);}
+  function hat(t,v){noise(t,.035,v,'highpass',6500);}
+  const root=55,baseWave=tone==='bright'?'sine':tone==='bell'?'triangle':'sawtooth';
+  const cutoff=tone==='deep'?700:tone==='bright'?3000:tone==='pulse'?1100:4200;
+  const kickPat=rhythm==='tribal'?[0,6,10]:rhythm==='sync'?[0,7,11]:[0,8];
+  const snarePat=rhythm==='tribal'?[4,11]:rhythm==='sync'?[5,13]:[4,12];
+  const melodyA=[0,2,1,3,2,4,1,2],melodyB=[0,2,4,2,1,3,4,2];
+  for(let s=0;s<bars*16;s++){
+   const bar=Math.floor(s/16),pos=s%16,part=Math.min(3,Math.floor(bar/4)),t=s*stepTime;
+   const build=[.48,.78,1,.42][part],level=den*build;
+   if(kickPat.includes(pos))kick(t,.16*level);
+   if(part>0&&snarePat.includes(pos))snare(t,.065*level);
+   if((part===2&&pos%2===1)||(part!==0&&pos%4===2))hat(t,.014*level);
+   const chordProg=[0,3,1,4][bar%4],chordNotes=[0,2,4].map((n)=>scale[(chordProg+n)%scale.length]+(chordProg+n>=scale.length?12:0));
+   if(pos===0){
+    chordNotes.forEach((n,i)=>voice(root*4*Math.pow(2,n/12),t,beat*3.65,'sawtooth',(.018+i*.002)*level,cutoff*.8,true));
+    const bassDegree=scale[chordProg%scale.length];
+    voice(root*Math.pow(2,(bassDegree-12)/12),t,beat*1.8,'triangle',.12*level,260,false);
+   }
+   if(pos===8)voice(root*Math.pow(2,(scale[(chordProg+2)%scale.length]-12)/12),t,beat*1.25,'sawtooth',.095*level,230,false);
+   const phrase=part===0?[0,8]:part===1?[0,5,8,13]:part===2?[0,2,5,7,8,10,13,15]:[0,8,12];
+   if(phrase.includes(pos)&&den>.16){
+    const seq=(part===2?melodyB:melodyA)[(Math.floor(s/2)+bar)%8];
+    const drift=Math.floor((Math.sin((s+11)*12.9898)*.5+.5)*variety*2);
+    const note=scale[(seq+drift)%scale.length];
+    const octave=part===2?3:2;
+    voice(root*Math.pow(2,octave+note/12),t,beat*(part===2?.34:.58),baseWave,.052*level,cutoff,true);
+   }
+  }
+  const rendered=await off.startRendering();
+  const channels=rendered.numberOfChannels,frames=rendered.length,bytes=44+frames*channels*2;
+  const buffer=new ArrayBuffer(bytes),view=new DataView(buffer);
+  function str(offset,value){for(let i=0;i<value.length;i++)view.setUint8(offset+i,value.charCodeAt(i));}
+  str(0,'RIFF');view.setUint32(4,bytes-8,true);str(8,'WAVE');str(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,channels,true);
+  view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*channels*2,true);
+  view.setUint16(32,channels*2,true);view.setUint16(34,16,true);str(36,'data');view.setUint32(40,frames*channels*2,true);
+  const channelData=Array.from({length:channels},(_,i)=>rendered.getChannelData(i));
+  let offset=44;
+  for(let i=0;i<frames;i++)for(let ch=0;ch<channels;ch++){
+   const sample=Math.max(-1,Math.min(1,channelData[ch][i]));
+   view.setInt16(offset,sample<0?sample*32768:sample*32767,true);offset+=2;
+  }
+  const blob=new Blob([buffer],{type:'audio/wav'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='ORIGIN-MUSIC-'+mood+'-'+bpm+'BPM.wav';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
+  $('status').textContent='Готово! WAV создан: '+Math.round(duration)+' секунд, стерео, 44,1 кГц.';
+ }catch(err){$('status').textContent='Не удалось создать WAV: '+(err.message||err);}
+ finally{button.disabled=false;$('play').disabled=false;}
+}
+
+$('export').addEventListener('click',exportWav);
 $('save').addEventListener('click',()=>{
  const blob=new Blob([JSON.stringify(projectData(),null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='origin-music-project.json';a.click();URL.revokeObjectURL(url);
