@@ -3,6 +3,7 @@ import marimo
 __generated_with = "0.19.0"
 app = marimo.App(width="medium")
 
+
 @app.cell
 def _():
     import platform
@@ -12,23 +13,41 @@ def _():
     import marimo as mo
     return mo, platform, shutil, subprocess, sys
 
+
 @app.cell
 def _(mo, platform, shutil, sys):
-    mo.md("# ORIGIN MUSIC ENGINE — проверка облачного GPU\\n\\nСначала проверяем среду molab. Установка музыкальной модели начнётся только после подтверждения GPU.")
-    mo.md(f"**Python:** {sys.version}\\n\\n**Платформа:** {platform.platform()}\\n\\n**Свободное место:** {shutil.disk_usage('/').free / 1024**3:.1f} ГБ")
-    return
+    free_gb = shutil.disk_usage("/").free / (1024 ** 3)
+    return mo.md(
+        f"""# ORIGIN MUSIC ENGINE — проверка облачного GPU
+
+Сейчас проверяем только облачную среду. Музыкальная модель пока не устанавливается.
+
+- **Python:** {sys.version}
+- **Платформа:** {platform.platform()}
+- **Свободное место:** {free_gb:.1f} ГБ
+"""
+    )
+
 
 @app.cell
 def _(mo, subprocess):
     try:
-        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=20)
+        result = subprocess.run(
+            ["nvidia-smi"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
         if result.returncode == 0:
-            mo.md("## GPU обнаружен\\n\\n" + result.stdout)
+            message = "## GPU обнаружен\n\n" + result.stdout
         else:
-            mo.md("## GPU пока не подключён\\n\\n" + (result.stderr or result.stdout or "nvidia-smi не вернул данных"))
+            details = result.stderr or result.stdout or "nvidia-smi не вернул данных"
+            message = "## GPU пока не подключён\n\n" + details
     except Exception as exc:
-        mo.md(f"## GPU не обнаружен\\n\\nКоманда nvidia-smi недоступна: {exc}\\n\\nПроверим подключение GPU в настройках блокнота.")
-    return
+        message = "## GPU не обнаружен\n\n" + f"Команда nvidia-smi недоступна: {exc}\n\nПроверим подключение GPU в настройках блокнота."
+    return mo.md(message)
+
 
 if __name__ == "__main__":
     app.run()
